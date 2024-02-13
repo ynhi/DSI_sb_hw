@@ -32,15 +32,39 @@ import pandas as pd
 
 #%matplotlib inline 
 import matplotlib.pyplot as plt
+import argparse
+import yaml
 
 # %% [markdown]
 # #### 1. Load the data
 
 # %%
-df = pd.read_csv('daily-shelter-overnight-service-occupancy-capacity-2023.csv')
+
+parser = argparse.ArgumentParser(description = 'Dataset analysis script')
+parser.add_argument('infile', type=str, 
+                help='Input filename of dataset')
+parser.add_argument('origin_outfile', type=str, 
+                help='Output filename of original dataset')
+parser.add_argument('user_config_file', type=str,
+                help='user_config_filename')
+parser.add_argument('job_config_file', type=str,
+                help='job_config_filename')
+                
+args = parser.parse_args()
+
+config_paths = [args.user_config_file, args.job_config_file]
+
+config = {}
+for path in config_paths:
+    with open(path, 'r') as f:
+        this_config = yaml.safe_load(f)
+        config.update(this_config)
+
+
+df = pd.read_csv(args.infile)
 
 # Save the original dataset using the filename format for assignment 2
-df.to_csv('VU_NHI_python_assignment2_orig.csv')
+df.to_csv(args.origin_outfile)
 
 # %% [markdown]
 # #### 2. Profile the DataFrame
@@ -292,7 +316,7 @@ room_df
 # 
 
 # %%
-month_groups = df.groupby('month')
+month_groups = df.groupby(config['groupby'])
 
 # %%
 month_groups[['occupancy_rate_beds', 'occupancy_rate_rooms']].mean()
@@ -301,7 +325,7 @@ month_groups[['occupancy_rate_beds', 'occupancy_rate_rooms']].mean()
 # Using `agg()`
 
 # %%
-month_df = df.groupby('month').agg(bed_capacity = ('capacity_actual_bed', 'sum'),
+month_df = df.groupby(config['groupby']).agg(bed_capacity = ('capacity_actual_bed', 'sum'),
                                    beds_occupied = ('occupied_beds', 'sum'),
                                    beds_unavailable = ('unavailable_beds', 'sum'),
                                    bed_occupancy_rate = ('occupancy_rate_beds', 'mean'),
@@ -319,6 +343,8 @@ month_df
 # From the `month_df` dataframe above, we plot `bed_capacity` and `room_capacity` to show how the capacities changed across the 12 months in 2023.
 
 # %%
+plt.style.use(config['plot_style'])
+
 fig,ax = plt.subplots()
 
 # %%
