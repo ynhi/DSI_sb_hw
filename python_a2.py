@@ -34,6 +34,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import argparse
 import yaml
+import logging
+
 
 # %% [markdown]
 # #### 1. Load the data
@@ -41,30 +43,46 @@ import yaml
 # %%
 
 parser = argparse.ArgumentParser(description = 'Dataset analysis script')
-parser.add_argument('infile', type=str, 
-                help='Input filename of dataset')
+parser.add_argument('infile', type=str,
+                    help='Input filename of dataset')
 parser.add_argument('origin_outfile', type=str, 
-                help='Output filename of original dataset')
+                    help='Output filename of original dataset')
 parser.add_argument('user_config_file', type=str,
-                help='user_config_filename')
+                    help='user_config_filename')
 parser.add_argument('job_config_file', type=str,
-                help='job_config_filename')
-                
+                    help='job_config_filename')
+parser.add_argument('--verbose', '-v', action='store_true',
+                    help='print verbose logs'
+                    )
 args = parser.parse_args()
 
 config_paths = [args.user_config_file, args.job_config_file]
 
 config = {}
 for path in config_paths:
-    with open(path, 'r') as f:
-        this_config = yaml.safe_load(f)
-        config.update(this_config)
+    try:
+        with open(path, 'r') as f:
+            this_config = yaml.safe_load(f)
+            config.update(this_config)
+    except FileNotFoundError as e:
+        e.add_note(f'FileNotFoundError: {path} cannot be found. Expect a valid path and filename.')
+        raise e
+
+logging_level = logging.DEBUG if args.verbose else logging.INFO
+
+logging.basicConfig(
+    level = logging_level,
+    handlers=[logging.StreamHandler(), logging.FileHandler('python_a2.log')],
+    )
 
 
 df = pd.read_csv(args.infile)
+logging.info(f'Successfully loaded {args.infile}')
+assert isinstance(df, pd.DataFrame), 'df should be a DataFrame'
 
 # Save the original dataset using the filename format for assignment 2
 df.to_csv(args.origin_outfile)
+
 
 # %% [markdown]
 # #### 2. Profile the DataFrame
@@ -169,7 +187,9 @@ df['month']
 # #### 8. Save data to an excel file
 
 # %%
+logging.debug(f'Saving DataFrame df as an excel file.')
 df.to_excel('VU_NHI_python_assignment2_proc.xlsx', index=False)
+
 
 # %% [markdown]
 # ## More data wrangling
@@ -193,6 +213,7 @@ df['occupancy_rate']
 # #### 2. Removing a column from the DataFrame
 
 # %%
+logging.info('Dropping "location_province" column from DataFrame df.')
 df = df.drop('location_province', axis=1)
 
 # %% [markdown]
